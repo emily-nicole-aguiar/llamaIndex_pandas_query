@@ -1,0 +1,46 @@
+WITH Genres AS (
+    SELECT DISTINCT
+        primary_genre,
+        store_genres
+    FROM dbo.game_data_all
+    WHERE [release] >= '2025-07-30' AND [release] <= '2025-08-10'
+),
+Weeks AS (
+    SELECT CONCAT('W', DATEPART(ISO_WEEK, GETDATE())) AS WeekNum
+    UNION ALL
+    SELECT CONCAT('W', DATEPART(ISO_WEEK, DATEADD(WEEK, -1, GETDATE())))
+),
+Days AS (
+    SELECT 1 AS DayNum, 'Mon' AS DayName UNION ALL
+    SELECT 2, 'Tue' UNION ALL
+    SELECT 3, 'Wed' UNION ALL
+    SELECT 4, 'Thu' UNION ALL
+    SELECT 5, 'Fri' UNION ALL
+    SELECT 6, 'Sat' UNION ALL
+    SELECT 7, 'Sun'
+),
+FixTable AS (
+SELECT
+    g.primary_genre,
+    g.store_genres,
+    d.DayNum,
+    w.WeekNum AS Week,
+    d.DayName AS Day
+FROM Genres g
+CROSS JOIN Weeks w
+CROSS JOIN Days d
+--ORDER BY g.primary_genre, g.store_genres, w.WeekNum, d.DayNum;
+)
+SELECT
+      tb.[primary_genre],
+      tb.[store_genres],
+      [Week],
+      [Day],
+      [DayNum],
+      CASE WHEN dtg.[game] IS NULL THEN '0' ELSE dtg.[game] END AS [game]
+FROM FixTable tb
+LEFT JOIN dbo.game_data_all dtg
+ON tb.[primary_genre] = dtg.[primary_genre] AND
+   tb.[store_genres] = dtg.[store_genres] AND
+   tb.[Week] = CONCAT('W', DATEPART(week, dtg.[release])) AND
+   tb.[Day] = FORMAT(dtg.[release], 'ddd')
